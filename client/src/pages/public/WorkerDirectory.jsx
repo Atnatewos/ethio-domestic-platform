@@ -1,74 +1,40 @@
 // File path: /client/src/pages/public/WorkerDirectory.jsx
-// Purpose: Public worker directory page - browse verified workers with trust scores.
-// Architecture: Uses config-driven filters and the centralized design system.
+// Purpose: Public worker directory with filters and search
+// Architecture: Uses React Query for data fetching
 
-import React, { useState, useEffect } from 'react';
-import { useConfig } from '../../context/ConfigContext';
-import { useToast } from '../../context/ToastContext';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { getWorkerDirectory } from '../../services/verification.service';
 import WorkerCard from '../../components/domain/WorkerCard';
 
-const WorkerDirectory = ({ onWorkerClick }) => {
-  const { config } = useConfig();
-  const { toast } = useToast();
-  
-  const [workers, setWorkers] = useState([]);
-  const [loading, setLoading] = useState(true);
+const WorkerDirectory = () => {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState({
     workerType: '',
     trustTier: '',
     availability: '',
     location: '',
-    search: ''
+    search: '',
   });
-  const [pagination, setPagination] = useState({
-    page: 1,
-    total: 0,
-    limit: 12
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['workers', filters, page],
+    queryFn: () => getWorkerDirectory({ ...filters, page, limit: 12 }),
   });
-
-  useEffect(() => {
-    fetchWorkers();
-  }, [filters, pagination.page]);
-
-  const fetchWorkers = async () => {
-    setLoading(true);
-    try {
-      const response = await getWorkerDirectory({
-        ...filters,
-        page: pagination.page,
-        limit: pagination.limit
-      });
-
-      if (response.success) {
-        setWorkers(response.data.items);
-        setPagination(prev => ({
-          ...prev,
-          total: response.data.total
-        }));
-      }
-    } catch (error) {
-      toast.error('Failed to load worker directory');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, page: 1 }));
+    setPage(1);
   };
 
   const handleWorkerClick = (workerId) => {
-    if (onWorkerClick) {
-      onWorkerClick(workerId);
-    }
+    navigate(`/worker/${workerId}`);
   };
 
-  const totalPages = Math.ceil(pagination.total / pagination.limit);
-
   return (
-    <div className="app-main">
+    <div className="directory-page">
       <div className="page-header">
         <h1>Verified Workers</h1>
         <p>Browse our database of verified domestic workers with trust scores.</p>
@@ -76,23 +42,21 @@ const WorkerDirectory = ({ onWorkerClick }) => {
 
       {/* Filters */}
       <div className="filters-bar">
-        <select 
+        <select
           className="filter-select"
           value={filters.workerType}
           onChange={(e) => handleFilterChange('workerType', e.target.value)}
         >
           <option value="">All Worker Types</option>
-          {config?.forms?.workerRegistration?.sections
-            ?.find(s => s.id === 'work')?.fields
-            ?.find(f => f.name === 'workerType')?.options
-            ?.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+          <option value="maid">Maid</option>
+          <option value="nanny">Nanny</option>
+          <option value="cook">Cook</option>
+          <option value="driver">Driver</option>
+          <option value="cleaner">Cleaner</option>
+          <option value="guard">Guard</option>
         </select>
 
-        <select 
+        <select
           className="filter-select"
           value={filters.trustTier}
           onChange={(e) => handleFilterChange('trustTier', e.target.value)}
@@ -102,7 +66,7 @@ const WorkerDirectory = ({ onWorkerClick }) => {
           <option value="verified">🔵 Verified</option>
         </select>
 
-        <select 
+        <select
           className="filter-select"
           value={filters.availability}
           onChange={(e) => handleFilterChange('availability', e.target.value)}
@@ -112,22 +76,6 @@ const WorkerDirectory = ({ onWorkerClick }) => {
           <option value="part_time">Part-time</option>
           <option value="live_in">Live-in</option>
           <option value="live_out">Live-out</option>
-        </select>
-
-        <select 
-          className="filter-select"
-          value={filters.location}
-          onChange={(e) => handleFilterChange('location', e.target.value)}
-        >
-          <option value="">All Locations</option>
-          {config?.forms?.workerRegistration?.sections
-            ?.find(s => s.id === 'location')?.fields
-            ?.find(f => f.name === 'zone')?.options
-            ?.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
         </select>
 
         <input
@@ -140,13 +88,18 @@ const WorkerDirectory = ({ onWorkerClick }) => {
       </div>
 
       {/* Results */}
-      {loading ? (
-        <div className="d-grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+      {isLoading ? (
+        <div className="loading-grid">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="skeleton-card" style={{ height: '320px' }}></div>
           ))}
         </div>
-      ) : workers.length === 0 ? (
+      ) : error ? (
+        <div className="error-state">
+          <h3>Error loading workers</h3>
+          <p>Please try again later.</p>
+        </div>
+      ) : data?.items?.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">🔍</div>
           <h3>No workers found</h3>
@@ -154,10 +107,10 @@ const WorkerDirectory = ({ onWorkerClick }) => {
         </div>
       ) : (
         <>
-          <div className="d-grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-            {workers.map(worker => (
-              <WorkerCard 
-                key={worker.id} 
+          <div className="workers-grid">
+            {data?.items?.map(worker => (
+              <WorkerCard
+                key={worker.id}
                 worker={worker}
                 onClick={() => handleWorkerClick(worker.id)}
               />
@@ -165,27 +118,25 @@ const WorkerDirectory = ({ onWorkerClick }) => {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="table-pagination">
-              <div className="pagination-info">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} workers
-              </div>
-              <div className="pagination-controls">
-                <button 
-                  className="pagination-btn"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                  disabled={pagination.page === 1}
-                >
-                  Previous
-                </button>
-                <button 
-                  className="pagination-btn"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page === totalPages}
-                >
-                  Next
-                </button>
-              </div>
+          {data?.total > 12 && (
+            <div className="pagination">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </button>
+              <span className="pagination-info">
+                Page {page} of {Math.ceil(data.total / 12)}
+              </span>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.ceil(data.total / 12)}
+              >
+                Next
+              </button>
             </div>
           )}
         </>

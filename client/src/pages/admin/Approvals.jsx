@@ -1,208 +1,318 @@
 // File path: /client/src/pages/admin/Approvals.jsx
-// Purpose: Admin page to review and approve/reject registrations with custom toasts
+// Purpose: Modern admin page to approve/reject worker and employer registrations
+// Architecture: Uses React Query, Framer Motion, and modern UI components
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
-import { apiService } from '../../services/api';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { getPendingApprovals, approveUser, rejectUser } from '../../services/admin.service';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import Skeleton from '../../components/ui/Skeleton';
+import Input from '../../components/ui/Input';
+import Modal from '../../components/ui/Modal';
 
-export default function Approvals() {
-  const { tokens } = useAuth();
-  const { toast, confirm, prompt } = useToast();
-  const [approvals, setApprovals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState({ userType: '', registrationSource: '' });
-  const [actionLoading, setActionLoading] = useState(null);
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 },
+  },
+};
 
-  useEffect(() => {
-    loadApprovals();
-  }, [filter]);
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3 },
+  },
+};
 
-  const loadApprovals = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.get('/api/admin/approvals', {
-        params: filter,
-        headers: { Authorization: `Bearer ${tokens.accessToken}` }
-      });
+const Approvals = () => {
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState('all');
+  const [rejectModal, setRejectModal] = useState({ open: false, userId: null, userType: null });
+  const [rejectReason, setRejectReason] = useState('');
 
-      if (response.success) {
-        setApprovals(response.data.items);
-      }
-    } catch (error) {
-      toast.error('Failed to load approvals');
-      console.error('Failed to load approvals:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Fetch pending approvals
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-approvals'],
+    queryFn: getPendingApprovals,
+  });
+
+  // Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: ({ userId, userType }) => approveUser(userId, userType),
+    onSuccess: () => {
+      toast.success('User approved successfully!');
+      queryClient.invalidateQueries(['admin-approvals']);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to approve user');
+    },
+  });
+
+  // Reject mutation
+  const rejectMutation = useMutation({
+    mutationFn: ({ userId, userType, reason }) => rejectUser(userId, userType, reason),
+    onSuccess: () => {
+      toast.success('User rejected');
+      queryClient.invalidateQueries(['admin-approvals']);
+      setRejectModal({ open: false, userId: null, userType: null });
+      setRejectReason('');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to reject user');
+    },
+  });
+
+  const handleApprove = (userId, userType) => {
+    approveMutation.mutate({ userId, userType });
   };
 
-  const handleApprove = async (id, userType, userName) => {
-    const confirmed = await confirm({
-      title: 'Approve Registration',
-      message: `Are you sure you want to approve ${userName}'s registration?`,
-      confirmText: 'Approve',
-      cancelText: 'Cancel',
-      type: 'info'
-    });
-
-    if (!confirmed) return;
-
-    setActionLoading(id);
-    try {
-      const response = await apiService.post(
-        `/api/admin/approvals/${id}/approve`,
-        { userType },
-        { headers: { Authorization: `Bearer ${tokens.accessToken}` } }
-      );
-
-      if (response.success) {
-        toast.success(`✅ ${userName}'s registration approved!`);
-        loadApprovals();
-      }
-    } catch (error) {
-      toast.error('Failed to approve: ' + (error.response?.data?.message || 'Unknown error'));
-    } finally {
-      setActionLoading(null);
-    }
+  const handleRejectClick = (userId, userType) => {
+    setRejectModal({ open: true, userId, userType });
   };
 
-  const handleReject = async (id, userType, userName) => {
-    const reason = await prompt({
-      title: 'Reject Registration',
-      message: `Why are you rejecting ${userName}'s registration?`,
-      placeholder: 'Enter reason (optional)',
-      defaultValue: ''
-    });
-
-    if (reason === null) return; // User cancelled
-
-    const confirmed = await confirm({
-      title: 'Confirm Rejection',
-      message: `Are you sure you want to reject ${userName}'s registration?`,
-      confirmText: 'Reject',
-      cancelText: 'Cancel',
-      type: 'danger'
-    });
-
-    if (!confirmed) return;
-
-    setActionLoading(id);
-    try {
-      const response = await apiService.post(
-        `/api/admin/approvals/${id}/reject`,
-        { userType, reason },
-        { headers: { Authorization: `Bearer ${tokens.accessToken}` } }
-      );
-
-      if (response.success) {
-        toast.warning(`⚠️ ${userName}'s registration rejected`);
-        loadApprovals();
-      }
-    } catch (error) {
-      toast.error('Failed to reject: ' + (error.response?.data?.message || 'Unknown error'));
-    } finally {
-      setActionLoading(null);
+  const handleRejectSubmit = () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please provide a reason for rejection');
+      return;
     }
+    rejectMutation.mutate({
+      userId: rejectModal.userId,
+      userType: rejectModal.userType,
+      reason: rejectReason,
+    });
   };
+
+  const approvals = data?.data || { workers: [], employers: [] };
+  const workers = filter === 'all' || filter === 'workers' ? approvals.workers || [] : [];
+  const employers = filter === 'all' || filter === 'employers' ? approvals.employers || [] : [];
 
   return (
-    <div className="admin-page">
-      <div className="page-header">
-        <h1>Registration Approvals</h1>
-        <p>Review and approve pending registrations</p>
-      </div>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="approvals-page"
+    >
+      {/* Page Header */}
+      <motion.div variants={itemVariants} className="page-header">
+        <h1>Pending Approvals ✅</h1>
+        <p>Review and approve new worker and employer registrations.</p>
+      </motion.div>
 
-      <div className="filters-bar">
-        <select
-          value={filter.userType}
-          onChange={(e) => setFilter({ ...filter, userType: e.target.value })}
-          className="filter-select"
-        >
-          <option value="">All Types</option>
-          <option value="worker">Workers</option>
-          <option value="employer">Employers</option>
-        </select>
+      {/* Filters */}
+      <motion.div variants={itemVariants}>
+        <Card className="filters-card">
+          <div className="filter-tabs">
+            <button
+              className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
+              onClick={() => setFilter('all')}
+            >
+              All ({workers.length + employers.length})
+            </button>
+            <button
+              className={`filter-tab ${filter === 'workers' ? 'active' : ''}`}
+              onClick={() => setFilter('workers')}
+            >
+              Workers ({workers.length})
+            </button>
+            <button
+              className={`filter-tab ${filter === 'employers' ? 'active' : ''}`}
+              onClick={() => setFilter('employers')}
+            >
+              Employers ({employers.length})
+            </button>
+          </div>
+        </Card>
+      </motion.div>
 
-        <select
-          value={filter.registrationSource}
-          onChange={(e) => setFilter({ ...filter, registrationSource: e.target.value })}
-          className="filter-select"
-        >
-          <option value="">All Sources</option>
-          <option value="online">Online</option>
-          <option value="office">Office</option>
-        </select>
-      </div>
-
-      {loading ? (
-        <div className="loading">Loading approvals...</div>
-      ) : approvals.length === 0 ? (
-        <div className="empty-state">
-          <h3>No pending approvals</h3>
-          <p>All registrations have been processed</p>
-        </div>
-      ) : (
-        <div className="approvals-list">
-          {approvals.map(approval => (
-            <div key={approval.id} className="approval-card">
-              <div className="approval-info">
-                <div className="approval-avatar">
-                  {approval.paymentProof ? (
-                    <img src={approval.paymentProof} alt="Payment proof" />
-                  ) : (
-                    <div className="avatar-placeholder">📄</div>
-                  )}
-                </div>
-                <div className="approval-details">
-                  <h3>{approval.fullName}</h3>
-                  <p className="phone">{approval.phone}</p>
-                  <div className="approval-meta">
-                    <span className={`badge badge-${approval.userType}`}>
-                      {approval.userType}
-                    </span>
-                    {approval.workerType && (
-                      <span className="badge badge-info">{approval.workerType}</span>
-                    )}
-                    <span className="badge badge-source">{approval.registrationSource}</span>
-                    <span className="amount">{approval.amount} ETB</span>
-                  </div>
-                  <p className="date">
-                    Submitted: {new Date(approval.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="approval-actions">
-                <button
-                  onClick={() => handleApprove(approval.id, approval.userType, approval.fullName)}
-                  disabled={actionLoading === approval.id}
-                  className="btn btn-success"
-                >
-                  {actionLoading === approval.id ? 'Processing...' : '✓ Approve'}
-                </button>
-                <button
-                  onClick={() => handleReject(approval.id, approval.userType, approval.fullName)}
-                  disabled={actionLoading === approval.id}
-                  className="btn btn-danger"
-                >
-                  ✗ Reject
-                </button>
-                {approval.paymentProof && (
-                  <a
-                    href={approval.paymentProof}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-secondary"
+      {/* Workers List */}
+      {(filter === 'all' || filter === 'workers') && workers.length > 0 && (
+        <motion.div variants={itemVariants}>
+          <Card>
+            <Card.Header>
+              <h2>Worker Registrations</h2>
+            </Card.Header>
+            <Card.Body>
+              <div className="approvals-list">
+                {workers.map((worker, index) => (
+                  <motion.div
+                    key={worker.id}
+                    className="approval-item"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
                   >
-                    View Receipt
-                  </a>
-                )}
+                    <div className="approval-avatar">
+                      {worker.photo_url ? (
+                        <img src={worker.photo_url} alt={worker.full_name} />
+                      ) : (
+                        <div className="avatar-placeholder">👷</div>
+                      )}
+                    </div>
+                    <div className="approval-info">
+                      <h3 className="approval-name">{worker.full_name}</h3>
+                      <div className="approval-meta">
+                        <span>{worker.phone}</span>
+                        <span>•</span>
+                        <span className="capitalize">{worker.worker_type}</span>
+                        <span>•</span>
+                        <span>{worker.zone}</span>
+                      </div>
+                      <div className="approval-date">
+                        Registered: {new Date(worker.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="approval-actions">
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => handleApprove(worker.id, 'worker')}
+                        loading={approveMutation.isLoading}
+                      >
+                        ✓ Approve
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleRejectClick(worker.id, 'worker')}
+                        loading={rejectMutation.isLoading}
+                      >
+                        ✗ Reject
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
+            </Card.Body>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Employers List */}
+      {(filter === 'all' || filter === 'employers') && employers.length > 0 && (
+        <motion.div variants={itemVariants}>
+          <Card>
+            <Card.Header>
+              <h2>Employer Registrations</h2>
+            </Card.Header>
+            <Card.Body>
+              <div className="approvals-list">
+                {employers.map((employer, index) => (
+                  <motion.div
+                    key={employer.id}
+                    className="approval-item"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <div className="approval-avatar">
+                      <div className="avatar-placeholder">🏢</div>
+                    </div>
+                    <div className="approval-info">
+                      <h3 className="approval-name">{employer.full_name}</h3>
+                      <div className="approval-meta">
+                        <span>{employer.phone}</span>
+                        <span>•</span>
+                        <span>{employer.email}</span>
+                        <span>•</span>
+                        <span>{employer.zone}</span>
+                      </div>
+                      <div className="approval-date">
+                        Registered: {new Date(employer.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="approval-actions">
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => handleApprove(employer.id, 'employer')}
+                        loading={approveMutation.isLoading}
+                      >
+                        ✓ Approve
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleRejectClick(employer.id, 'employer')}
+                        loading={rejectMutation.isLoading}
+                      >
+                        ✗ Reject
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Empty State */}
+      {workers.length === 0 && employers.length === 0 && !isLoading && (
+        <motion.div variants={itemVariants}>
+          <Card>
+            <div className="empty-state">
+              <div className="empty-icon">✅</div>
+              <h3>All caught up!</h3>
+              <p>No pending registrations to review.</p>
             </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="approvals-list">
+          {[1, 2, 3].map(i => (
+            <Skeleton.Card key={i} />
           ))}
         </div>
       )}
-    </div>
+
+      {/* Reject Modal */}
+      <Modal
+        isOpen={rejectModal.open}
+        onClose={() => setRejectModal({ open: false, userId: null, userType: null })}
+        title="Reject Registration"
+      >
+        <div className="modal-content">
+          <p className="modal-description">
+            Please provide a reason for rejecting this registration. This will be sent to the user.
+          </p>
+          <Input
+            label="Rejection Reason"
+            type="text"
+            placeholder="e.g., Incomplete information, invalid documents..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            required
+          />
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              onClick={() => setRejectModal({ open: false, userId: null, userType: null })}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleRejectSubmit}
+              loading={rejectMutation.isLoading}
+            >
+              Reject User
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </motion.div>
   );
-}
+};
+
+export default Approvals;

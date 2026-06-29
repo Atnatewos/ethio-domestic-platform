@@ -1,5 +1,6 @@
 // File path: /server/routes/admin.routes.js
-// Purpose: Admin API routes - approvals, verification, management, stats
+// Purpose: Admin API routes
+// Security: All routes require admin authentication
 
 const express = require('express');
 const router = express.Router();
@@ -11,23 +12,18 @@ const { requireAdmin } = require('../middleware/rbac');
 router.use(authenticate);
 router.use(requireAdmin);
 
-// Dashboard stats
-router.get('/stats', adminController.getDashboardStats);
-
-// Registration approvals
+// Approvals
 router.get('/approvals', adminController.getPendingApprovals);
-router.post('/approvals/:id/approve', adminController.approveRegistration);
-router.post('/approvals/:id/reject', adminController.rejectRegistration);
+router.post('/approvals/:id/approve', adminController.approveUser);
+router.post('/approvals/:id/reject', adminController.rejectUser);
+
+// Dashboard
+router.get('/stats', adminController.getDashboardStats);
 
 // Workers management
 router.get('/workers', adminController.getAllWorkers);
-router.get('/workers/:id', adminController.getWorkerDetails);
-router.post('/workers/:id/suspend', adminController.suspendWorker);
 
-// Future routes will be added here:
-// router.get('/employers', adminController.getAllEmployers);
-// router.get('/jobs', adminController.getAllJobs);
-// router.get('/payments', adminController.getAllPayments);
-// router.get('/reports', adminController.getAllReports);
+// Employers management
+router.get('/employers', adminController.getAllEmployers);
 
 module.exports = router;

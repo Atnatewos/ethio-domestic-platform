@@ -37,3 +37,7 @@
    5. UTILITIES
    ============================================ */
 @import './utilities.css';
+
+@import './modern-ui.css';
+@import './worker-pages.css';
+@import './employer-pages.css';

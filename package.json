@@ -10,10 +10,16 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["domestic-workers", "ethiopia", "platform"],
+  "keywords": [
+    "domestic-workers",
+    "ethiopia",
+    "platform"
+  ],
   "author": "Theron",
   "license": "ISC",
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@tanstack/react-query": "^5.101.2",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
@@ -21,6 +27,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
+    "framer-motion": "^12.42.0",
     "helmet": "^8.2.0",
     "joi": "^18.2.3",
     "jsonwebtoken": "^9.0.3",
@@ -30,15 +37,18 @@
     "pg": "^8.22.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.11.0",
-    "uuid": "^13.0.0"
+    "react-hook-form": "^7.80.0",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^6.30.4",
+    "uuid": "^13.0.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^6.0.3",
+    "@vitejs/plugin-react": "^4.7.0",
     "concurrently": "^10.0.3",
     "eslint": "^10.5.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.6.2",
-    "vite": "^7.1.7"
+    "vite": "^5.4.21"
   }
 }

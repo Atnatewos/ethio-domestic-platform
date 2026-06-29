@@ -1,233 +1,184 @@
 // File path: /client/src/pages/admin/Settings.jsx
-// Purpose: Admin platform settings page - allows runtime configuration changes.
-// Architecture: Config-driven UI that renders input fields based on the config structure.
+// Purpose: Modern admin page to manage platform settings and pricing
+// Architecture: Uses React Query, Framer Motion, and modern UI components
 
 import React, { useState, useEffect } from 'react';
-import { useToast } from '../../context/ToastContext';
-import { getSettings, updateSetting } from '../../services/settings.service';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { getPlatformSettings, updatePlatformSetting } from '../../services/admin.service';
+import Card from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
+import Button from '../../components/ui/Button';
+import Skeleton from '../../components/ui/Skeleton';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4 },
+  },
+};
 
 const Settings = () => {
-  const { toast } = useToast();
-  const [settings, setSettings] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  
-  // Local state for editable fields
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
+  const [savingKey, setSavingKey] = useState(null);
+
+  // Fetch platform settings
+  const { data, isLoading } = useQuery({
+    queryKey: ['platform-settings'],
+    queryFn: getPlatformSettings,
+  });
+
+  // Update setting mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ key, value }) => updatePlatformSetting(key, value),
+    onSuccess: () => {
+      toast.success('Setting updated successfully!');
+      queryClient.invalidateQueries(['platform-settings']);
+      setSavingKey(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update setting');
+      setSavingKey(null);
+    },
+  });
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
-    setLoading(true);
-    try {
-      const response = await getSettings();
-      if (response.success) {
-        setSettings(response.data);
-        // Initialize form data with current values
-        setFormData({
-          workerRegFee: response.data.pricing.registration.worker.amount,
-          employerRegFee: response.data.pricing.registration.employer.amount,
-          workerCommission: response.data.pricing.commission.worker.percent,
-          employerCommission: response.data.pricing.commission.employer.percent,
-          urgentHireFee: response.data.pricing.urgentHire.amount,
-          officeServiceFee: response.data.pricing.officeService.amount,
-          collateralAmount: response.data.pricing.collateral.amount
-        });
-      }
-    } catch (error) {
-      toast.error('Failed to load settings');
-    } finally {
-      setLoading(false);
+    if (data?.data) {
+      setFormData(data.data);
     }
+  }, [data]);
+
+  const handleInputChange = (key, value) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleSave = (key) => {
+    setSavingKey(key);
+    updateMutation.mutate({ key, value: formData[key] });
   };
 
-  const handleSave = async (configKey, value, fieldName) => {
-    setSaving(true);
-    try {
-      const response = await updateSetting(configKey, value);
-      if (response.success) {
-        toast.success(`${fieldName} updated successfully!`);
-      }
-    } catch (error) {
-      toast.error(`Failed to update ${fieldName}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="app-main">
-        <div className="skeleton-card" style={{ height: '400px' }}></div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="settings-page"
+      >
+        <Skeleton.Card />
+        <Skeleton.Card />
+        <Skeleton.Card />
+      </motion.div>
     );
   }
 
+  const settings = data?.data || {};
+
+  const settingGroups = [
+    {
+      title: 'Platform Identity',
+      icon: '🏠',
+      settings: [
+        { key: 'platform.name', label: 'Platform Name', type: 'text' },
+        { key: 'platform.tagline', label: 'Tagline', type: 'text' },
+      ],
+    },
+    {
+      title: 'Registration Fees (ETB)',
+      icon: '💰',
+      settings: [
+        { key: 'pricing.registration.worker.amount', label: 'Worker Registration Fee', type: 'number' },
+        { key: 'pricing.registration.employer.amount', label: 'Employer Registration Fee', type: 'number' },
+      ],
+    },
+    {
+      title: 'Commission Rates (%)',
+      icon: '📊',
+      settings: [
+        { key: 'pricing.commission.worker.percent', label: 'Worker Commission %', type: 'number' },
+        { key: 'pricing.commission.employer.percent', label: 'Employer Commission %', type: 'number' },
+      ],
+    },
+    {
+      title: 'Premium Features',
+      icon: '⭐',
+      settings: [
+        { key: 'pricing.urgentHire.amount', label: 'Urgent Hire Badge Fee (ETB)', type: 'number' },
+        { key: 'pricing.urgentHire.durationHours', label: 'Urgent Badge Duration (Hours)', type: 'number' },
+        { key: 'pricing.officeService.amount', label: 'Office Service Fee (ETB)', type: 'number' },
+      ],
+    },
+    {
+      title: 'Worker Collateral',
+      icon: '🔒',
+      settings: [
+        { key: 'pricing.collateral.amount', label: 'Collateral Amount (ETB)', type: 'number' },
+        { key: 'pricing.collateral.holdMonths', label: 'Hold Duration (Months)', type: 'number' },
+      ],
+    },
+  ];
+
   return (
-    <div className="app-main">
-      <div className="page-header">
-        <h1>Platform Settings</h1>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="settings-page"
+    >
+      {/* Page Header */}
+      <motion.div variants={itemVariants} className="page-header">
+        <h1>Platform Settings ⚙️</h1>
         <p>Modify pricing and configuration at runtime. Changes take effect immediately.</p>
-      </div>
+      </motion.div>
 
-      <div className="d-grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))' }}>
-        
-        {/* Registration Fees */}
-        <div className="card" style={{ padding: 'var(--space-6)' }}>
-          <h3 className="text-lg font-semibold mb-4">Registration Fees (ETB)</h3>
-          
-          <div className="form-group">
-            <label className="form-label">Worker Registration Fee</label>
-            <div className="d-flex gap-2">
-              <input 
-                type="number" 
-                className="form-input"
-                value={formData.workerRegFee}
-                onChange={(e) => handleInputChange('workerRegFee', parseInt(e.target.value))}
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSave('pricing.registration.worker.amount', formData.workerRegFee, 'Worker Fee')}
-                disabled={saving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Employer Registration Fee</label>
-            <div className="d-flex gap-2">
-              <input 
-                type="number" 
-                className="form-input"
-                value={formData.employerRegFee}
-                onChange={(e) => handleInputChange('employerRegFee', parseInt(e.target.value))}
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSave('pricing.registration.employer.amount', formData.employerRegFee, 'Employer Fee')}
-                disabled={saving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Commission Rates */}
-        <div className="card" style={{ padding: 'var(--space-6)' }}>
-          <h3 className="text-lg font-semibold mb-4">Commission Rates (%)</h3>
-          
-          <div className="form-group">
-            <label className="form-label">Worker Commission %</label>
-            <div className="d-flex gap-2">
-              <input 
-                type="number" 
-                className="form-input"
-                value={formData.workerCommission}
-                onChange={(e) => handleInputChange('workerCommission', parseInt(e.target.value))}
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSave('pricing.commission.worker.percent', formData.workerCommission, 'Worker Commission')}
-                disabled={saving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Employer Commission %</label>
-            <div className="d-flex gap-2">
-              <input 
-                type="number" 
-                className="form-input"
-                value={formData.employerCommission}
-                onChange={(e) => handleInputChange('employerCommission', parseInt(e.target.value))}
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSave('pricing.commission.employer.percent', formData.employerCommission, 'Employer Commission')}
-                disabled={saving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Premium Features */}
-        <div className="card" style={{ padding: 'var(--space-6)' }}>
-          <h3 className="text-lg font-semibold mb-4">Premium Features (ETB)</h3>
-          
-          <div className="form-group">
-            <label className="form-label">Urgent Hire Badge Fee</label>
-            <div className="d-flex gap-2">
-              <input 
-                type="number" 
-                className="form-input"
-                value={formData.urgentHireFee}
-                onChange={(e) => handleInputChange('urgentHireFee', parseInt(e.target.value))}
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSave('pricing.urgentHire.amount', formData.urgentHireFee, 'Urgent Fee')}
-                disabled={saving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Office Service Fee</label>
-            <div className="d-flex gap-2">
-              <input 
-                type="number" 
-                className="form-input"
-                value={formData.officeServiceFee}
-                onChange={(e) => handleInputChange('officeServiceFee', parseInt(e.target.value))}
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSave('pricing.officeService.amount', formData.officeServiceFee, 'Office Fee')}
-                disabled={saving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Worker Collateral Amount</label>
-            <div className="d-flex gap-2">
-              <input 
-                type="number" 
-                className="form-input"
-                value={formData.collateralAmount}
-                onChange={(e) => handleInputChange('collateralAmount', parseInt(e.target.value))}
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSave('pricing.collateral.amount', formData.collateralAmount, 'Collateral')}
-                disabled={saving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
+      {/* Settings Groups */}
+      {settingGroups.map((group, groupIndex) => (
+        <motion.div key={group.title} variants={itemVariants}>
+          <Card>
+            <Card.Header>
+              <h2>
+                <span className="setting-icon">{group.icon}</span>
+                {group.title}
+              </h2>
+            </Card.Header>
+            <Card.Body>
+              <div className="settings-grid">
+                {group.settings.map((setting) => (
+                  <div key={setting.key} className="setting-item">
+                    <Input
+                      label={setting.label}
+                      type={setting.type}
+                      value={formData[setting.key] || ''}
+                      onChange={(e) => handleInputChange(setting.key, e.target.value)}
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleSave(setting.key)}
+                      loading={savingKey === setting.key}
+                      disabled={savingKey !== null}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </motion.div>
+      ))}
+    </motion.div>
   );
 };
 

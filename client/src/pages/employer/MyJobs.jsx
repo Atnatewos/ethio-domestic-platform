@@ -1,119 +1,180 @@
 // File path: /client/src/pages/employer/MyJobs.jsx
-// Purpose: Employer jobs management page - view and manage posted jobs.
-// Architecture: Config-driven table with job status tracking.
+// Purpose: Modern jobs management page with filters and actions
+// Architecture: Uses React Query, Framer Motion, and modern table design
 
-import React, { useState, useEffect } from 'react';
-import { useToast } from '../../context/ToastContext';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { getMyJobs } from '../../services/job.service';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import Skeleton from '../../components/ui/Skeleton';
 
-const EmployerMyJobs = ({ onNavigate }) => {
-  const { toast } = useToast();
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ status: 'active' });
+const MyJobs = () => {
+  const [filter, setFilter] = useState('active');
 
-  useEffect(() => {
-    fetchJobs();
-  }, [filters]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['employer-jobs', filter],
+    queryFn: () => getMyJobs({ status: filter }),
+  });
 
-  const fetchJobs = async () => {
-    setLoading(true);
-    try {
-      const response = await getMyJobs(filters);
-      if (response.success) {
-        setJobs(response.data.items);
-      }
-    } catch (error) {
-      toast.error('Failed to load jobs');
-    } finally {
-      setLoading(false);
-    }
+  const jobs = data?.data?.items || [];
+
+  const getStatusColor = (status) => {
+    const colors = {
+      active: 'success',
+      filled: 'info',
+      closed: 'neutral',
+      draft: 'warning',
+    };
+    return colors[status] || 'neutral';
   };
 
   return (
-    <div className="app-main">
-      <div className="page-header d-flex items-center justify-between">
-        <div>
-          <h1>My Jobs</h1>
-          <p>Track and manage your job postings.</p>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="my-jobs-page"
+    >
+      {/* Page Header */}
+      <div className="page-header">
+        <div className="header-content">
+          <div>
+            <h1>My Jobs 💼</h1>
+            <p>Manage your job postings and view applicants.</p>
+          </div>
+          <Button as="link" to="/employer/post-job" variant="primary">
+            ➕ Post New Job
+          </Button>
         </div>
-        <button className="btn btn-primary" onClick={() => onNavigate && onNavigate('employer-post-job')}>
-          ➕ Post New Job
-        </button>
       </div>
 
       {/* Filters */}
-      <div className="filters-bar">
-        <select 
-          className="filter-select"
-          value={filters.status}
-          onChange={(e) => setFilters({ status: e.target.value })}
-        >
-          <option value="active">Active</option>
-          <option value="filled">Filled</option>
-          <option value="closed">Closed</option>
-        </select>
-      </div>
-
-      {/* Jobs Table */}
-      {loading ? (
-        <div className="skeleton-card" style={{ height: '400px' }}></div>
-      ) : jobs.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">💼</div>
-          <h3>No jobs found</h3>
-          <p>Post your first job to start receiving applications.</p>
-          <button className="btn btn-primary mt-4" onClick={() => onNavigate && onNavigate('employer-post-job')}>
-            Post a Job
+      <Card className="filters-card">
+        <div className="filter-tabs">
+          <button
+            className={`filter-tab ${filter === 'active' ? 'active' : ''}`}
+            onClick={() => setFilter('active')}
+          >
+            Active
+          </button>
+          <button
+            className={`filter-tab ${filter === 'filled' ? 'active' : ''}`}
+            onClick={() => setFilter('filled')}
+          >
+            Filled
+          </button>
+          <button
+            className={`filter-tab ${filter === 'closed' ? 'active' : ''}`}
+            onClick={() => setFilter('closed')}
+          >
+            Closed
           </button>
         </div>
+      </Card>
+
+      {/* Jobs List */}
+      {isLoading ? (
+        <div className="jobs-list">
+          {[1, 2, 3].map(i => (
+            <Skeleton.Card key={i} />
+          ))}
+        </div>
+      ) : jobs.length === 0 ? (
+        <Card>
+          <div className="empty-state">
+            <div className="empty-icon">💼</div>
+            <h3>No {filter} jobs found</h3>
+            <p>Post a new job to start receiving applications.</p>
+            <Button as="link" to="/employer/post-job" variant="primary">
+              Post Your First Job
+            </Button>
+          </div>
+        </Card>
       ) : (
-        <div className="card">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Worker Type</th>
-                <th>Schedule</th>
-                <th>Housing</th>
-                <th>Salary</th>
-                <th>Applicants</th>
-                <th>Urgent</th>
-                <th>Posted</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map(job => (
-                <tr key={job.id}>
-                  <td className="font-medium text-capitalize">{job.workerType}</td>
-                  <td>{job.schedule === 'full_time' ? 'Full-time' : 'Part-time'}</td>
-                  <td>{job.housing === 'live_in' ? 'Live-in' : 'Live-out'}</td>
-                  <td>{job.salaryMin?.toLocaleString()} - {job.salaryMax?.toLocaleString()} ETB</td>
-                  <td>
-                    <span className="badge badge-info">{job.applicantCount}</span>
-                  </td>
-                  <td>
-                    {job.isUrgent && (
-                      <span className="badge badge-warning">⚡ Urgent</span>
-                    )}
-                  </td>
-                  <td>{new Date(job.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <button 
-                      className="btn btn-outline btn-sm"
-                      onClick={() => onNavigate && onNavigate('employer-applicants', job.id)}
+        <div className="jobs-list">
+          {jobs.map((job, index) => (
+            <motion.div
+              key={job.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card hoverable className="job-card-modern">
+                <div className="job-card-content">
+                  {/* Header */}
+                  <div className="job-card-header">
+                    <div className="job-info">
+                      <h3 className="job-title">{job.workerType}</h3>
+                      <div className="job-meta">
+                        <span>{job.schedule === 'full_time' ? 'Full-time' : 'Part-time'}</span>
+                        <span>•</span>
+                        <span>{job.housing === 'live_in' ? 'Live-in' : 'Live-out'}</span>
+                        {job.isUrgent && (
+                          <>
+                            <span>•</span>
+                            <Badge variant="warning" size="sm">⚡ Urgent</Badge>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant={getStatusColor(job.status)} size="lg">
+                      {job.status}
+                    </Badge>
+                  </div>
+
+                  {/* Details */}
+                  <div className="job-details-grid">
+                    <div className="detail-item">
+                      <span className="detail-icon">💰</span>
+                      <div className="detail-content">
+                        <div className="detail-label">Salary Range</div>
+                        <div className="detail-value">
+                          {job.salaryMin?.toLocaleString()} - {job.salaryMax?.toLocaleString()} ETB
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="detail-item">
+                      <span className="detail-icon">👥</span>
+                      <div className="detail-content">
+                        <div className="detail-label">Applicants</div>
+                        <div className="detail-value">{job.applicantCount || 0}</div>
+                      </div>
+                    </div>
+
+                    <div className="detail-item">
+                      <span className="detail-icon">📅</span>
+                      <div className="detail-content">
+                        <div className="detail-label">Posted</div>
+                        <div className="detail-value">
+                          {new Date(job.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="job-actions">
+                    <Button
+                      as="link"
+                      to={`/employer/my-jobs/${job.id}/applicants`}
+                      variant="primary"
+                      size="sm"
                     >
                       View Applicants
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
-export default EmployerMyJobs;
+export default MyJobs;

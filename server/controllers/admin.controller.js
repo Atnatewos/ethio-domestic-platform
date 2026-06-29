@@ -1,18 +1,15 @@
 // File path: /server/controllers/admin.controller.js
-// Purpose: Admin request handlers - approvals, verification, stats, management
+// Purpose: Admin request handlers
+// Architecture: Validates input and delegates to admin service
 
 const adminService = require('../services/admin.service');
 
-// Get pending approvals
+/**
+ * Get pending approvals
+ */
 const getPendingApprovals = async (req, res) => {
   try {
-    const { userType, registrationSource, page, limit } = req.query;
-    const result = await adminService.getPendingApprovals({
-      userType,
-      registrationSource,
-      page: parseInt(page) || 1,
-      limit: parseInt(limit) || 20
-    });
+    const result = await adminService.getPendingApprovals();
 
     res.json({
       success: true,
@@ -22,56 +19,83 @@ const getPendingApprovals = async (req, res) => {
     console.error('Get pending approvals error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch approvals'
+      message: 'Failed to fetch pending approvals'
     });
   }
 };
 
-// Approve registration
-const approveRegistration = async (req, res) => {
+/**
+ * Approve user registration
+ */
+const approveUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userType, notes } = req.body;
+    const { userType } = req.body;
     const adminId = req.user.id;
 
-    const result = await adminService.approveRegistration(id, userType, adminId, notes);
+    if (!userType || !['worker', 'employer'].includes(userType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user type'
+      });
+    }
+
+    const result = await adminService.approveUser(id, userType, adminId);
 
     res.json({
       success: true,
       message: result.message
     });
   } catch (error) {
-    console.error('Approve registration error:', error);
+    console.error('Approve user error:', error);
     res.status(400).json({
       success: false,
-      message: error.message || 'Failed to approve registration'
+      message: error.message || 'Failed to approve user'
     });
   }
 };
 
-// Reject registration
-const rejectRegistration = async (req, res) => {
+/**
+ * Reject user registration
+ */
+const rejectUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { userType, reason } = req.body;
     const adminId = req.user.id;
 
-    const result = await adminService.rejectRegistration(id, userType, adminId, reason);
+    if (!userType || !['worker', 'employer'].includes(userType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user type'
+      });
+    }
+
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required'
+      });
+    }
+
+    const result = await adminService.rejectUser(id, userType, reason, adminId);
 
     res.json({
       success: true,
       message: result.message
     });
   } catch (error) {
-    console.error('Reject registration error:', error);
+    console.error('Reject user error:', error);
     res.status(400).json({
       success: false,
-      message: error.message || 'Failed to reject registration'
+      message: error.message || 'Failed to reject user'
     });
   }
 };
 
-// Get dashboard stats
+/**
+ * Get dashboard statistics
+ */
 const getDashboardStats = async (req, res) => {
   try {
     const stats = await adminService.getDashboardStats();
@@ -84,12 +108,14 @@ const getDashboardStats = async (req, res) => {
     console.error('Get dashboard stats error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch dashboard stats'
+      message: 'Failed to fetch dashboard statistics'
     });
   }
 };
 
-// Get all workers
+/**
+ * Get all workers (admin view)
+ */
 const getAllWorkers = async (req, res) => {
   try {
     const result = await adminService.getAllWorkers(req.query);
@@ -107,53 +133,31 @@ const getAllWorkers = async (req, res) => {
   }
 };
 
-// Get worker details
-const getWorkerDetails = async (req, res) => {
+/**
+ * Get all employers (admin view)
+ */
+const getAllEmployers = async (req, res) => {
   try {
-    const { id } = req.params;
-    const worker = await adminService.getWorkerDetails(id);
+    const result = await adminService.getAllEmployers(req.query);
 
     res.json({
       success: true,
-      data: worker
+      data: result
     });
   } catch (error) {
-    console.error('Get worker details error:', error);
-    res.status(404).json({
+    console.error('Get all employers error:', error);
+    res.status(500).json({
       success: false,
-      message: error.message || 'Worker not found'
-    });
-  }
-};
-
-// Suspend worker
-const suspendWorker = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const adminId = req.user.id;
-
-    const result = await adminService.suspendWorker(id, adminId, reason);
-
-    res.json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    console.error('Suspend worker error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to suspend worker'
+      message: 'Failed to fetch employers'
     });
   }
 };
 
 module.exports = {
   getPendingApprovals,
-  approveRegistration,
-  rejectRegistration,
+  approveUser,
+  rejectUser,
   getDashboardStats,
   getAllWorkers,
-  getWorkerDetails,
-  suspendWorker
+  getAllEmployers
 };

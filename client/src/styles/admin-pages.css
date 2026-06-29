@@ -1,0 +1,171 @@
+/* File path: /client/src/styles/admin-pages.css */
+/* Purpose: Modern styles for admin pages with animations and glassmorphism */
+/* Architecture: Extends design system with admin-specific components */
+
+/* ============================================
+   APPROVALS PAGE
+   ============================================ */
+
+.approvals-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.approvals-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.approval-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-slate-50);
+  border-radius: var(--radius-lg);
+  transition: background var(--duration-fast) var(--ease-glide);
+}
+
+.approval-item:hover {
+  background: var(--color-slate-100);
+}
+
+.approval-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-slate-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.approval-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  font-size: 2rem;
+}
+
+.approval-info {
+  flex: 1;
+}
+
+.approval-name {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  margin-bottom: var(--space-1);
+}
+
+.approval-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-slate-600);
+  flex-wrap: wrap;
+}
+
+.approval-date {
+  font-size: var(--text-xs);
+  color: var(--color-slate-500);
+  margin-top: var(--space-1);
+}
+
+.approval-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   SETTINGS PAGE
+   ============================================ */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.setting-icon {
+  margin-right: var(--space-2);
+}
+
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.setting-item {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-slate-50);
+  border-radius: var(--radius-lg);
+}
+
+.setting-item .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* ============================================
+   MODAL
+   ============================================ */
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.modal-description {
+  color: var(--color-slate-600);
+  font-size: var(--text-sm);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .approval-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .approval-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .setting-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .setting-item .btn {
+    width: 100%;
+  }
+}

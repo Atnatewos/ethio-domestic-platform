@@ -1,54 +1,56 @@
 // File path: /client/src/pages/employer/Applicants.jsx
-// Purpose: Employer applicants management page - review and manage job applicants.
-// Architecture: Real-time applicant tracking with status updates.
+// Purpose: Modern applicants management page with status updates
+// Architecture: Uses React Query, mutations, and visual status pipeline
 
-import React, { useState, useEffect } from 'react';
-import { useToast } from '../../context/ToastContext';
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { getJobApplicants, updateApplicationStatus } from '../../services/application.service';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import Skeleton from '../../components/ui/Skeleton';
 
-const EmployerApplicants = ({ jobId, onNavigate }) => {
-  const { toast, confirm } = useToast();
-  const [applicants, setApplicants] = useState([]);
-  const [loading, setLoading] = useState(true);
+const Applicants = () => {
+  const { jobId } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (jobId) {
-      fetchApplicants();
-    }
-  }, [jobId]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['job-applicants', jobId],
+    queryFn: () => getJobApplicants(jobId),
+  });
 
-  const fetchApplicants = async () => {
-    setLoading(true);
-    try {
-      const response = await getJobApplicants(jobId);
-      if (response.success) {
-        setApplicants(response.data.items);
-      }
-    } catch (error) {
-      toast.error('Failed to load applicants');
-    } finally {
-      setLoading(false);
-    }
+  const mutation = useMutation({
+    mutationFn: ({ applicationId, status }) => updateApplicationStatus(applicationId, status),
+    onSuccess: () => {
+      toast.success('Application status updated');
+      queryClient.invalidateQueries(['job-applicants', jobId]);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    },
+  });
+
+  const applicants = data?.data?.items || [];
+
+  const getStatusColor = (status) => {
+    const colors = {
+      applied: 'info',
+      shortlisted: 'warning',
+      interviewed: 'warning',
+      trial: 'warning',
+      hired: 'success',
+      rejected: 'danger',
+    };
+    return colors[status] || 'neutral';
   };
 
-  const handleStatusChange = async (applicationId, newStatus, applicantName) => {
-    const confirmed = await confirm({
-      title: `Update Application Status`,
-      message: `Are you sure you want to mark ${applicantName} as ${newStatus}?`,
-      confirmText: 'Confirm',
-      type: newStatus === 'rejected' ? 'danger' : 'info'
-    });
-
-    if (!confirmed) return;
-
-    try {
-      const response = await updateApplicationStatus(applicationId, newStatus);
-      if (response.success) {
-        toast.success(`Application ${newStatus} successfully`);
-        fetchApplicants();
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+  const handleStatusUpdate = (applicationId, newStatus, applicantName) => {
+    if (window.confirm(`Are you sure you want to ${newStatus} ${applicantName}?`)) {
+      mutation.mutate({ applicationId, status: newStatus });
     }
   };
 
@@ -59,121 +61,166 @@ const EmployerApplicants = ({ jobId, onNavigate }) => {
   };
 
   return (
-    <div className="app-main">
-      <div className="page-header d-flex items-center justify-between">
-        <div>
-          <h1>Job Applicants</h1>
-          <p>Review and manage candidates for this position.</p>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="applicants-page"
+    >
+      {/* Page Header */}
+      <div className="page-header">
+        <div className="header-content">
+          <div>
+            <h1>Job Applicants 👥</h1>
+            <p>Review and manage candidates for this position.</p>
+          </div>
+          <Button variant="secondary" onClick={() => navigate('/employer/my-jobs')}>
+            ← Back to Jobs
+          </Button>
         </div>
-        <button className="btn btn-secondary" onClick={() => onNavigate && onNavigate('employer-my-jobs')}>
-          ← Back to Jobs
-        </button>
       </div>
 
-      {loading ? (
-        <div className="skeleton-card" style={{ height: '400px' }}></div>
-      ) : applicants.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">👥</div>
-          <h3>No applicants yet</h3>
-          <p>Share your job posting to attract more verified workers.</p>
+      {/* Applicants List */}
+      {isLoading ? (
+        <div className="applicants-list">
+          {[1, 2, 3].map(i => (
+            <Skeleton.Card key={i} />
+          ))}
         </div>
+      ) : applicants.length === 0 ? (
+        <Card>
+          <div className="empty-state">
+            <div className="empty-icon">👥</div>
+            <h3>No applicants yet</h3>
+            <p>Share your job posting to attract more verified workers.</p>
+          </div>
+        </Card>
       ) : (
-        <div className="d-flex flex-col gap-4">
-          {applicants.map(app => (
-            <div key={app.applicationId} className="card" style={{ padding: 'var(--space-6)' }}>
-              <div className="d-flex items-center justify-between flex-wrap gap-4">
-                <div className="d-flex items-center gap-4">
-                  <div className="skeleton-circle md">
-                    {app.photo ? (
-                      <img 
-                        src={app.photo} 
-                        alt={app.fullName} 
-                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
-                      />
-                    ) : (
-                      <span>👤</span>
+        <div className="applicants-list">
+          {applicants.map((app, index) => (
+            <motion.div
+              key={app.applicationId}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card className="applicant-card">
+                <div className="applicant-content">
+                  {/* Header */}
+                  <div className="applicant-header">
+                    <div className="applicant-avatar">
+                      {app.photo ? (
+                        <img src={app.photo} alt={app.fullName} />
+                      ) : (
+                        <div className="avatar-placeholder">👤</div>
+                      )}
+                    </div>
+                    <div className="applicant-info">
+                      <h3 className="applicant-name">{app.fullName}</h3>
+                      <div className="applicant-meta">
+                        <span>{app.experience} years exp</span>
+                        <span>•</span>
+                        <Badge variant={getTrustBadgeClass(app.trustScore)} size="sm">
+                          {app.trustScore?.tier || 'new'}
+                        </Badge>
+                        <span>•</span>
+                        <span className="worker-type">{app.workerType}</span>
+                      </div>
+                    </div>
+                    <Badge variant={getStatusColor(app.status)} size="lg">
+                      {app.status}
+                    </Badge>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="applicant-actions">
+                    {app.status === 'applied' && (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleStatusUpdate(app.applicationId, 'shortlisted', app.fullName)}
+                          loading={mutation.isLoading}
+                        >
+                          ⭐ Shortlist
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleStatusUpdate(app.applicationId, 'rejected', app.fullName)}
+                          loading={mutation.isLoading}
+                        >
+                          ✗ Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {app.status === 'shortlisted' && (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleStatusUpdate(app.applicationId, 'interviewed', app.fullName)}
+                          loading={mutation.isLoading}
+                        >
+                          💬 Interview
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleStatusUpdate(app.applicationId, 'rejected', app.fullName)}
+                          loading={mutation.isLoading}
+                        >
+                          ✗ Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {app.status === 'interviewed' && (
+                      <>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => handleStatusUpdate(app.applicationId, 'hired', app.fullName)}
+                          loading={mutation.isLoading}
+                        >
+                          ✓ Hire
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleStatusUpdate(app.applicationId, 'rejected', app.fullName)}
+                          loading={mutation.isLoading}
+                        >
+                          ✗ Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {app.status === 'trial' && (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => handleStatusUpdate(app.applicationId, 'hired', app.fullName)}
+                        loading={mutation.isLoading}
+                      >
+                        ✓ Confirm Hire
+                      </Button>
+                    )}
+
+                    {(app.status === 'hired' || app.status === 'rejected') && (
+                      <div className="status-message">
+                        {app.status === 'hired' ? '✅ This worker has been hired' : '❌ This application was rejected'}
+                      </div>
                     )}
                   </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-dark mb-1">{app.fullName}</h3>
-                    <div className="d-flex items-center gap-3 text-sm text-muted">
-                      <span>{app.experience} yrs exp</span>
-                      <span className={`trust-badge ${getTrustBadgeClass(app.trustScore)}`}>
-                        {app.trustScore?.tier || 'new'}
-                      </span>
-                      <span className="text-capitalize">{app.workerType}</span>
-                    </div>
-                  </div>
                 </div>
-
-                <div className="d-flex items-center gap-2">
-                  <span className={`badge badge-${
-                    app.status === 'hired' ? 'success' :
-                    app.status === 'rejected' ? 'danger' :
-                    app.status === 'applied' ? 'info' : 'warning'
-                  }`}>
-                    {app.status}
-                  </span>
-                  
-                  {app.status === 'applied' && (
-                    <>
-                      <button 
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleStatusChange(app.applicationId, 'shortlisted', app.fullName)}
-                      >
-                        Shortlist
-                      </button>
-                      <button 
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleStatusChange(app.applicationId, 'rejected', app.fullName)}
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-
-                  {app.status === 'shortlisted' && (
-                    <>
-                      <button 
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleStatusChange(app.applicationId, 'interviewed', app.fullName)}
-                      >
-                        Interview
-                      </button>
-                      <button 
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleStatusChange(app.applicationId, 'rejected', app.fullName)}
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-
-                  {app.status === 'interviewed' && (
-                    <>
-                      <button 
-                        className="btn btn-success btn-sm"
-                        onClick={() => handleStatusChange(app.applicationId, 'hired', app.fullName)}
-                      >
-                        ✓ Hire
-                      </button>
-                      <button 
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleStatusChange(app.applicationId, 'rejected', app.fullName)}
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+              </Card>
+            </motion.div>
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
-export default EmployerApplicants;
+export default Applicants;
