@@ -1,0 +1,250 @@
+/* File path: /client/src/styles/inputs.css */
+/* Purpose: Form input system - text, select, textarea, checkbox, and validation states. */
+/* Architecture: Focuses on accessibility, clean focus rings, and clear validation feedback. */
+
+/* ============================================
+   BASE INPUT STYLES
+   ============================================ */
+
+.form-input,
+.form-select,
+.form-textarea {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0.875rem; /* 10px 14px */
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-slate-900);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-slate-200);
+  border-radius: var(--radius-lg);
+  transition: 
+    border-color var(--duration-fast) var(--ease-glide),
+    box-shadow var(--duration-fast) var(--ease-glide);
+  appearance: none;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--color-slate-400);
+}
+
+/* Focus State: Modern ring effect */
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* Disabled State */
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+  background-color: var(--color-slate-100);
+  color: var(--color-slate-500);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Read-only State */
+.form-input[readonly] {
+  background-color: var(--color-slate-50);
+  cursor: default;
+}
+
+/* ============================================
+   VALIDATION STATES
+   ============================================ */
+
+/* Error State */
+.form-input.error,
+.form-select.error,
+.form-textarea.error {
+  border-color: var(--color-danger);
+}
+
+.form-input.error:focus,
+.form-select.error:focus,
+.form-textarea.error:focus {
+  box-shadow: 0 0 0 3px var(--color-danger-light);
+}
+
+/* Success State */
+.form-input.success,
+.form-select.success,
+.form-textarea.success {
+  border-color: var(--color-success);
+}
+
+.form-input.success:focus,
+.form-select.success:focus,
+.form-textarea.success:focus {
+  box-shadow: 0 0 0 3px var(--color-success-light);
+}
+
+/* ============================================
+   SPECIFIC INPUT TYPES
+   ============================================ */
+
+/* Textarea */
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+}
+
+/* Select */
+.form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+/* File Input */
+.form-file {
+  display: block;
+  width: 100%;
+  font-size: var(--text-sm);
+  color: var(--color-slate-600);
+  file-selector-button {
+    padding: 0.5rem 1rem;
+    margin-right: 1rem;
+    border: none;
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-700);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: var(--font-medium);
+    transition: background-color var(--duration-fast) var(--ease-glide);
+  }
+  file-selector-button:hover {
+    background-color: var(--color-slate-200);
+  }
+}
+
+/* ============================================
+   CHECKBOX & RADIO
+   ============================================ */
+
+.form-checkbox,
+.form-radio {
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-slate-300);
+  background-color: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-glide);
+  accent-color: var(--color-primary);
+}
+
+.form-radio {
+  border-radius: var(--radius-full);
+}
+
+.form-checkbox:checked,
+.form-radio:checked {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.form-checkbox:focus,
+.form-radio:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* ============================================
+   FORM GROUP & LABELS
+   ============================================ */
+
+.form-group {
+  margin-bottom: var(--space-5);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-slate-700);
+}
+
+.form-label .required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-slate-500);
+}
+
+.form-error {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  font-weight: var(--font-medium);
+}
+
+/* ============================================
+   TOGGLE SWITCH
+   ============================================ */
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-slate-300);
+  transition: .3s var(--ease-glide);
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s var(--ease-spring);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--color-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}

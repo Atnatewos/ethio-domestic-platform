@@ -1,0 +1,158 @@
+/* File path: /client/src/styles/modals.css */
+/* Purpose: Modal and dialog system - overlays, confirmations, and prompts. */
+/* Architecture: Uses physics-based spring animations for a premium, smooth feel. */
+
+/* ============================================
+   MODAL OVERLAY
+   ============================================ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  padding: var(--space-4);
+  animation: fadeIn var(--duration-normal) var(--ease-fade);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ============================================
+   MODAL CONTENT
+   ============================================ */
+
+.modal-content {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-2xl);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: var(--z-modal);
+  animation: modalSlideUp var(--duration-slow) var(--ease-spring);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================
+   MODAL SECTIONS
+   ============================================ */
+
+.modal-header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-slate-100);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-slate-900);
+}
+
+.modal-body {
+  padding: var(--space-6);
+}
+
+.modal-message {
+  margin: 0;
+  color: var(--color-slate-600);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.modal-footer {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-slate-100);
+  background-color: var(--color-slate-50);
+  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* ============================================
+   CONFIRM DIALOG SPECIFICS
+   ============================================ */
+
+.confirm-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xl);
+  flex-shrink: 0;
+}
+
+.confirm-icon-warning {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning-dark);
+}
+
+.confirm-icon-danger {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger-dark);
+}
+
+.confirm-icon-info {
+  background-color: var(--color-info-light);
+  color: var(--color-info-dark);
+}
+
+/* ============================================
+   PROMPT DIALOG SPECIFICS
+   ============================================ */
+
+.prompt-dialog .modal-body form {
+  margin-top: var(--space-4);
+}
+
+.prompt-dialog .form-input {
+  width: 100%;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+
+@media (max-width: 640px) {
+  .modal-content {
+    max-width: none;
+    margin: var(--space-4);
+    max-height: calc(100vh - var(--space-8));
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+}

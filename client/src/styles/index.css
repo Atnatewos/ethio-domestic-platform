@@ -1,0 +1,39 @@
+/* File path: /client/src/styles/index.css */
+/* Purpose: Master CSS import file - orchestrates the loading order of all stylesheets. */
+/* Architecture: Imports are ordered by dependency: Tokens -> Reset -> Typography -> Components -> Layouts -> Utilities. */
+
+/* ============================================
+   1. FOUNDATION
+   ============================================ */
+@import './tokens.css';
+@import './reset.css';
+@import './typography.css';
+
+/* ============================================
+   2. CORE COMPONENTS
+   ============================================ */
+@import './buttons.css';
+@import './inputs.css';
+@import './cards.css';
+@import './badges.css';
+
+/* ============================================
+   3. COMPLEX COMPONENTS
+   ============================================ */
+@import './forms.css';
+@import './tables.css';
+@import './modals.css';
+@import './toasts.css';
+@import './notifications.css';
+
+/* ============================================
+   4. LAYOUTS & STRUCTURE
+   ============================================ */
+@import './layouts.css';
+@import './skeletons.css';
+@import './admin.css';
+
+/* ============================================
+   5. UTILITIES
+   ============================================ */
+@import './utilities.css';

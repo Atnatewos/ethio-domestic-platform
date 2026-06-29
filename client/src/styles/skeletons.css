@@ -1,0 +1,132 @@
+/* File path: /client/src/styles/skeletons.css */
+/* Purpose: Loading skeleton system - placeholder UI shown while data is fetching. */
+/* Architecture: Uses CSS animations for a shimmer effect, avoiding jarring spinners. */
+
+/* ============================================
+   BASE SKELETON
+   ============================================ */
+
+.skeleton {
+  background-color: var(--color-slate-200);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Shimmer Animation */
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ============================================
+   SKELETON VARIANTS
+   ============================================ */
+
+/* Text Skeletons */
+.skeleton-text {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-text.short { width: 40%; }
+.skeleton-text.medium { width: 70%; }
+.skeleton-text.long { width: 100%; }
+
+.skeleton-heading {
+  height: 1.5rem;
+  width: 50%;
+  margin-bottom: 1rem;
+}
+
+/* Shape Skeletons */
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-circle.sm { width: 2rem; height: 2rem; }
+.skeleton-circle.md { width: 3rem; height: 3rem; }
+.skeleton-circle.lg { width: 4rem; height: 4rem; }
+
+.skeleton-rect {
+  width: 100%;
+  height: 10rem;
+  border-radius: var(--radius-lg);
+}
+
+/* ============================================
+   COMPONENT SKELETONS
+   ============================================ */
+
+/* Card Skeleton */
+.skeleton-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-slate-200);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Table Row Skeleton */
+.skeleton-table-row {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-slate-100);
+  align-items: center;
+}
+
+/* List Item Skeleton */
+.skeleton-list-item {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-slate-100);
+}
+
+.skeleton-list-item:last-child {
+  border-bottom: none;
+}
+
+/* ============================================
+   LOADING SCREEN
+   ============================================ */
+
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  color: var(--color-slate-500);
+  gap: var(--space-4);
+}
+
+.loading-screen h2 {
+  font-size: var(--text-xl);
+  color: var(--color-slate-700);
+}
